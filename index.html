@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Parsons Problem Builder</title>
+  <meta charset="UTF-8" />
+  <title>Parsons Problem Tool</title>
   <style>
-    .container { display: flex; gap: 20px; margin-top: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .container { display: flex; gap: 20px; flex-wrap: wrap; }
     .box { border: 1px solid #ccc; padding: 10px; width: 45%; min-height: 200px; }
     .line {
       background: #f0f0f0;
@@ -27,7 +29,7 @@
       padding: 2px 6px;
     }
     textarea {
-       width: 100%;
+      width: 100%;
       height: 120px;
       font-family: monospace;
       font-size: 14px;
@@ -40,46 +42,25 @@
 </head>
 <body>
 
-<h2>Enter code to turn into a Parsons Problem</h2>
-<textarea id="codeInput" placeholder="Paste your code here..."></textarea><br>
-<button onclick="generateProblem()">Generate</button>
+<div id="teacherPanel">
+  <h2>Enter code to turn into a Parsons Problem</h2>
+  <textarea id="codeInput" placeholder="Paste your code here..."></textarea>
+  <button onclick="generateProblem()">Generate</button>
+  <p>Copy this student link: <span id="shareLink"></span></p>
+  <hr>
+</div>
 
+<h2>Reorder and indent the lines to make the code work</h2>
 <div class="container">
   <div class="box" id="choices"></div>
   <div class="box" id="workspace"></div>
 </div>
-
+<br>
 <button onclick="checkAnswer()">Check</button>
 <p id="result"></p>
 
 <script>
   let correctLines = [];
-
-  function generateProblem() {
-    const code = document.getElementById("codeInput").value.trim();
-    if (!code) return;
-
-    const lines = code.split("\n").map(line => {
-      const match = line.match(/^(\s*)(.*)$/);
-      const indent = match[1].length / 4; // assume 4 spaces per indent
-      return { indent: Math.floor(indent), text: match[2] };
-    });
-
-    correctLines = lines;
-
-    // Clear boxes
-    document.getElementById("choices").innerHTML = "";
-    document.getElementById("workspace").innerHTML = "";
-    document.getElementById("result").textContent = "";
-
-    // Shuffle lines
-    const shuffled = [...lines].sort(() => Math.random() - 0.5);
-
-    shuffled.forEach((line, idx) => {
-      const lineDiv = createLineElement(line.text, "line-" + idx);
-      document.getElementById("choices").appendChild(lineDiv);
-    });
-  }
 
   function createLineElement(text, id) {
     const lineDiv = document.createElement("div");
@@ -124,14 +105,79 @@
   }
 
   function adjustIndent(lineDiv, change) {
-    let indent = parseInt(lineDiv.dataset.indent || "0");
+    let indent = parseInt(lineDiv.dataset.indent);
     indent = Math.max(0, indent + change);
     lineDiv.dataset.indent = indent;
     const codeSpan = lineDiv.querySelector(".code-text");
     codeSpan.style.marginLeft = `${indent * 20}px`;
   }
 
-  // Setup drag and drop for both boxes
+  function generateProblem() {
+    const code = document.getElementById("codeInput").value.trim();
+    if (!code) return;
+
+    const lines = code.split("\n").map(line => {
+      const match = line.match(/^(\s*)(.*)$/);
+      const indent = match[1].length / 4;
+      return { indent: Math.floor(indent), text: match[2] };
+    });
+
+    correctLines = lines;
+
+    document.getElementById("choices").innerHTML = "";
+    document.getElementById("workspace").innerHTML = "";
+    document.getElementById("result").textContent = "";
+
+    const shuffled = [...lines].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach((line, idx) => {
+      const lineDiv = createLineElement(line.text, "line-" + idx);
+      document.getElementById("choices").appendChild(lineDiv);
+    });
+
+    // Encode and share
+    const encoded = btoa(code);
+    const url = `${location.origin}${location.pathname}?code=${encoded}`;
+    document.getElementById("shareLink").innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+  }
+
+  function loadFromEncodedString(encoded) {
+    const code = atob(encoded);
+    const lines = code.split("\n").map(line => {
+      const match = line.match(/^(\s*)(.*)$/);
+      const indent = match[1].length / 4;
+      return { indent: Math.floor(indent), text: match[2] };
+    });
+
+    correctLines = lines;
+
+    const shuffled = [...lines].sort(() => Math.random() - 0.5);
+    shuffled.forEach((line, idx) => {
+      const lineDiv = createLineElement(line.text, "line-" + idx);
+      document.getElementById("choices").appendChild(lineDiv);
+    });
+  }
+
+  function checkAnswer() {
+    const studentLines = Array.from(document.getElementById("workspace").children).map(div => {
+      return {
+        indent: parseInt(div.dataset.indent),
+        text: div.querySelector(".code-text").textContent.trim()
+      };
+    });
+
+    const result = document.getElementById("result");
+
+    const correct = studentLines.length === correctLines.length &&
+      studentLines.every((line, i) =>
+        line.text === correctLines[i].text &&
+        line.indent === correctLines[i].indent
+      );
+
+    result.textContent = correct ? "✅ Correct!" : "❌ Try again.";
+  }
+
+  // Setup drag and drop
   [document.getElementById("choices"), document.getElementById("workspace")].forEach(box => {
     box.addEventListener("dragover", (e) => e.preventDefault());
     box.addEventListener("drop", (e) => {
@@ -142,20 +188,12 @@
     });
   });
 
-  function checkAnswer() {
-    const studentLines = Array.from(document.getElementById("workspace").children).map(div => {
-      const indent = parseInt(div.dataset.indent || "0");
-      const text = div.querySelector(".code-text").textContent.trim();
-      return { indent, text };
-    });
-
-    const correct = studentLines.length === correctLines.length &&
-      studentLines.every((line, i) =>
-        line.text === correctLines[i].text &&
-        line.indent === correctLines[i].indent
-      );
-
-    document.getElementById("result").textContent = correct ? "✅ Correct!" : "❌ Try again.";
+  // Student mode check
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get("code");
+  if (encoded) {
+    document.getElementById("teacherPanel").style.display = "none";
+    loadFromEncodedString(encoded);
   }
 </script>
 
