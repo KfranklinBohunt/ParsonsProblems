@@ -129,22 +129,24 @@
   // Check if the workspace lines match the correct order and indentation
   function checkAnswer() {
     const studentLines = Array.from(workspace.children).map(div => {
-      return {
-        indent: parseInt(div.dataset.indent),
-        text: div.querySelector(".code-text").textContent.trim()
-      };
-    });
+    const indent = parseInt(div.dataset.indent || "0");  // Ensure default 0
+    const text = div.querySelector(".code-text")?.textContent.trim();
+    return { indent, text };
+  });
 
-    const result = document.getElementById("result");
+  console.log("Student answer:", studentLines);
+  console.log("Expected answer:", correctLines);
 
-    const correct = studentLines.length === correctLines.length &&
-      studentLines.every((line, i) =>
-        line.text === correctLines[i].text &&
-        line.indent === correctLines[i].indent
-      );
+  const result = document.getElementById("result");
 
-    result.textContent = correct ? "✅ Correct!" : "❌ Try again.";
-  }
+  const correct = studentLines.length === correctLines.length &&
+    studentLines.every((line, i) =>
+      line.text === correctLines[i].text &&
+      line.indent === correctLines[i].indent
+    );
+
+  result.textContent = correct ? "✅ Correct!" : "❌ Try again.";
+}
 </script>
 
 </body>
