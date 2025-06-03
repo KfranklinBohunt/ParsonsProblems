@@ -68,15 +68,16 @@
     lineDiv.draggable = true;
     lineDiv.id = id;
     lineDiv.dataset.indent = 0;
-
+  
     const codeSpan = document.createElement("span");
     codeSpan.className = "code-text";
     codeSpan.textContent = text;
     lineDiv.appendChild(codeSpan);
-
+  
     const btnContainer = document.createElement("div");
     btnContainer.className = "indent-btns";
-
+  
+    // Indent button
     const indentBtn = document.createElement("button");
     indentBtn.className = "small";
     indentBtn.textContent = "➕";
@@ -84,7 +85,8 @@
       e.stopPropagation();
       adjustIndent(lineDiv, +1);
     };
-
+  
+    // Unindent button
     const unindentBtn = document.createElement("button");
     unindentBtn.className = "small";
     unindentBtn.textContent = "➖";
@@ -92,17 +94,44 @@
       e.stopPropagation();
       adjustIndent(lineDiv, -1);
     };
-
+  
+    // Move up button
+    const upBtn = document.createElement("button");
+    upBtn.className = "small";
+    upBtn.textContent = "⬆️";
+    upBtn.onclick = (e) => {
+      e.stopPropagation();
+      const parent = lineDiv.parentElement;
+      if (lineDiv.previousElementSibling) {
+        parent.insertBefore(lineDiv, lineDiv.previousElementSibling);
+      }
+    };
+  
+    // Move down button
+    const downBtn = document.createElement("button");
+    downBtn.className = "small";
+    downBtn.textContent = "⬇️";
+    downBtn.onclick = (e) => {
+      e.stopPropagation();
+      const parent = lineDiv.parentElement;
+      if (lineDiv.nextElementSibling) {
+        parent.insertBefore(lineDiv.nextElementSibling, lineDiv);
+      }
+    };
+  
     btnContainer.appendChild(indentBtn);
     btnContainer.appendChild(unindentBtn);
+    btnContainer.appendChild(upBtn);
+    btnContainer.appendChild(downBtn);
+  
     lineDiv.appendChild(btnContainer);
-
+  
     lineDiv.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", lineDiv.id);
     });
-
+  
     return lineDiv;
-  }
+}
 
   function adjustIndent(lineDiv, change) {
     let indent = parseInt(lineDiv.dataset.indent);
